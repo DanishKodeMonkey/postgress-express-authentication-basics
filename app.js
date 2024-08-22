@@ -51,8 +51,31 @@ app.use(express.urlencoded({ extended: false }));
 
 // Establish our first route, rendering the index view when requested.
 app.get('/', (req, res) => res.render('index'));
+// SEcond route to render 'sign-up-form' when requested.
+app.get('/sign-up', (req, res) => res.render('sign-up-form'));
+
+// Post route for submitting a sign up form
+app.post('/sign-up', async (req, res, next) => {
+    // When posted, try to
+    try {
+        // create a query to send to your database using our pool authentication
+        await pool.query(
+            'INSERT INTO users(username, password) VALUES($1, $2)',
+            // pass our submitted credentials seperately to avoid cross site scripting.
+            [req.body.username, req.body.password]
+        );
+        // once done, redirect to index.
+        res.redirect('/');
+        // If an error occours, do the following
+    } catch (err) {
+        // end function, passing the error to next middleware in chain.
+        return next(err);
+    }
+});
 
 // Configure app to listen to port, pulled from environment secrets.
-app.listen(process.env.PORT, () => console.log('App listening on port ', PORT));
+app.listen(process.env.PORT, () =>
+    console.log('App listening on port ', process.env.PORT)
+);
 
 // The app is now ready for use!

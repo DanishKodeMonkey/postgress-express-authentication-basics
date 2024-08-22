@@ -96,7 +96,7 @@ create, authenticate and manage user data.
 For this, we will use the node package manager to install express along with the following middleware.
 
 ```bash
-npm install express express-session pg passport passport-local ejs
+npm install express express-session pg passport passport-local ejs dotenv
 ```
 
 -   [Express](http://expressjs.com/), will be our application framework.
@@ -110,3 +110,94 @@ npm install express express-session pg passport passport-local ejs
 -   [passport-local](https://www.passportjs.org/packages/passport-local/), is the specific passport authentication strategy that we will establish for the purposes of this project. There are alot of different viable strategies to draw inspiration from, but this one is a common one for local authentication.
 
 -   [ejs] or Embedded Javascript Templates will be a render engine that we will use for the purposes of rendering views and executing javascript through the same files.
+
+-   [dotenv](https://www.npmjs.com/package/dotenv) will allow us to load environment variables safely from .env into our process.env object.
+
+## Step 3 - The express app
+
+We will start by establishing a very basic express application.
+For the moment, we will not yet secure the passwords and just use plain text passwords. **This should never ever be done in a serious production**, and will be fixed later down the line.
+
+So, let's create `app.js` and get to coding!
+
+```javascript
+/* Import our middleware */
+const { Pool } = require('pg');
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+require('dotenv').config();
+
+/* configure our postgres pool, that will be used to authenticate access to the database */
+const pool = new Pool({
+    /* use dotenv to safely store our actual connection strings in a secret .env file */
+    // refer to a locally stored dev database connection string, alternatively a production string.
+    connectionString: process.env.DATABASE_URL_DEV || process.env.DATABASE_URL,
+});
+
+/* Establish our express app */
+const app = express();
+
+/* Configure express app */
+// Set up our views directory
+app.set('views', __dirname);
+// configure our app to use ejs as our view engine
+app.set('view engine', 'ejs');
+
+// configure session middleware.
+// It is not something that will be used directly outside of this.
+// It is a prerequisite for passport, which will see heavy use however.
+app.use(
+    session({
+        // Establish a secret, pulled from our environment secrets
+        // This will be used to sign each session ID cookie
+        secret: process.env.SESSION_SECRET,
+        // Because we are using this for establishing login sessions, the following options
+        // should be disabled (true by default)
+        // Forces the session to be saved back to the session store if true.
+        resave: false,
+        // Forces a session that is unitizialized to be saved to teh store if enabled.
+        // A session that is new, but not modified, is uninitizialised.
+        saveUninitialized: false,
+    })
+);
+
+// Initialize our passport session middleware
+app.use(passport.session());
+
+// Configure express to parse url data to request body.
+app.use(express.urlencoded({ extended: false }));
+
+// Establish our first route, rendering the index view when requested.
+app.get('/', (req, res) => res.render('index'));
+
+// Configure app to listen to port, pulled from environment secrets.
+app.listen(process.env.PORT, () => console.log('App listening on port ', PORT));
+
+// The app is now ready for use!
+```
+
+## Step 4 - The index view.
+
+During our application setup, we set up a single route rendering a index view.
+lets make that now, create a `index.ejs` file.
+
+```javascript
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
+        <title></title>
+    </head>
+    <body>
+        <h1>Hello world</h1>
+    </body>
+</html>
+```
+
+This will serve as the page that we will secure and attempt to create access to.

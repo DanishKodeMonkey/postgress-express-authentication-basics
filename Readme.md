@@ -178,7 +178,7 @@ app.listen(process.env.PORT, () => console.log('App listening on port ', PORT));
 // The app is now ready for use!
 ```
 
-## Step 4 - The index view.
+## Step 4 - The views.
 
 During our application setup, we set up a single route rendering a index view.
 lets make that now, create a `index.ejs` file.

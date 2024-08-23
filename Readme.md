@@ -449,3 +449,295 @@ If the user is found, the session is persisted with the user object. Adding the 
 Congratulations, we have now introduced session persistance too our site!
 
 Next up, we will have to actually be able to log in to our user account and gain a session.
+
+## Step 6 - Log-in
+
+In order to actually establish a session and authenticate users, we need a way to assign a user to a request. So lets make a log-in page!
+
+### Step 6.1 - sign-in-form.ejs
+
+Go ahead and create `sign-in-form.ejs`
+
+```javascript
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
+        <title></title>
+    </head>
+    <body>
+        <h1>Please log in</h1>
+        <form
+            action="/log-in"
+            method="POST"
+        >
+            <label for="username">Username</label>
+            <input
+                type="text "
+                id="username"
+                name="username"
+                placeholder="username..."
+            />
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+            />
+            <button>Log In</button>
+        </form>
+    </body>
+</html>
+
+```
+
+A simple form, just like with sign up, the main difference being that we add a `action` to the form so that whenever it is submitted, it is `POST`'ed to the `/log-in` route
+
+### Step 6.2 - log-in POST using passport
+
+Now we are ready to leverage the power of passport!
+Thanks to our earlier setup we can now call our passport.authenticate method on post with log-in, and passport will handle the rest! We just have to define where to send the user if it succeeds or fails.
+
+    Authenticates requests.
+        Applies the nameed strategy (or strategies) to the incoming request, in order to authenticate the request. If authentication is successful, the user will be logged in and populated at req.user and a session will be established by default. If authentication fails, an unauthorized response will be sent.
+
+in `app.js` add another post route
+
+```javascript
+app.post(
+    '/log-in',
+    passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/',
+    })
+);
+```
+
+The snippet almost explains itself, but if anyone should wonder, the docs description of the authenticate method:
+
+    Authenticates requests.
+        Applies the nameed strategy (or strategies) to the incoming request, in order to authenticate the request. If authentication is successful, the user will be logged in and populated at req.user and a session will be established by default. If authentication fails, an unauthorized response will be sent.
+
+Thanks to passport, whenever we sign in now our credentials will be verified, and if succeeded our user session cookie will be established and we will be redirected to the index.
+Our session will then be verified each time we submit a request to another route of the site.
+
+We can then check these cookies for credentials and even use their information to determine how a page is rendered!
+
+## Step 7 - Using session credentials
+
+Thanks to our passport middleware we can now check user cookies for credentials and even use their information to determine how a page is rendered!
+
+Let's edit our previous index route a bit, passing the user object along to the view.
+
+### Step 7.1 - index route update
+
+```javascript
+app.get('/', (req, res) => res.render('index', { user: req.user }));
+```
+
+### Step 7.2 - index view update
+
+Now, we can enhance our index view to accommodate the user object, and even check if it exist and act accordingly!
+
+Lets update `index.ejs`
+
+```javascript
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        />
+        <title></title>
+    </head>
+    <body>
+        <% if(user) {%>
+        <h1>WELCOME BACK <%= user.username %>!</h1>
+        <a href="/log-out">LOG OUT</a>
+        <% } else { %>
+        <h1>please log in to proceed</h1>
+        <form
+            action="/log-in"
+            method="POST"
+        >
+            <label for="username">Username</label>
+            <input
+                type="text "
+                id="username"
+                name="username"
+                placeholder="username..."
+            />
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+            />
+            <button>Log In</button>
+        </form>
+        <% } %>
+    </body>
+</html>
+
+```
+
+Thanks to EJS, we are able to dynamically check if a user object is present, and valid, if so we can render one version of the view. If not, we will prompt a user log in!
+
+There are a bunch of other ways to use session cookies in this way, including redirecting traffic if authentication fails, show limited data on a given page, or an entirely third reaction.
+
+## Step 8 - Log out
+
+As a final touch, let's provide the user with a way to manually log-out of our site.
+
+We already added a `log-out` link on the index view, so let's update our app.js routes to include a log out prompt. It's easy!
+
+in `app.js` add another route:
+
+```javascript
+app.get('/log-out', (req, res, next) => {
+    req.logout((err) => {
+        if (err) {
+            return next(err);
+        }
+        res.redirect('/');
+    });
+});
+```
+
+Thanks to the convenience of passport, when we signed in, a `logout` method was added to the `req` object, so it's as easy as calling it and handling errors should they occur.
+
+This will clear the user credentials and session cookie.
+
+Afterwards, redirect the user to the index page, and have them prompted with a login screen!
+
+### Step 8.2 - Bonus! the locals object.
+
+Express allows us to set and access local variables throughout the entire application, even in views, using the locals object attached to a req object.
+
+Knowing this, we can easily create a middleware function that takes a req, and res object, manipulate the req object with a currentUser attribute, attaching the user credentials to it and passing the request to the next middleware in the chain.
+
+This can conveniently be placed somewhere between the passport initialization and before rendering the views.
+
+    Remember, middleware is executed in the order they are declared in the chain, from top to bottom.
+
+```javascript
+app.use((req, res, next) => {
+    res.locals.currentUser = req.user;
+    next();
+});
+```
+
+## Step 9 - Secure passwords
+
+As mentioned earlier, sending plain text passpords to and from a database is not exactly secure, anyone could intercept and grab that kind of data and numerous security issues would pop up.
+
+We must secure our stored passwords, so that even if someone gains illicit access to our database, the passwords will still be safe. This is a crucial step even for the most basic of apps.
+
+Luckily, a tool exists to help secure our password handling.
+
+## Step 9 - bcrypt
+
+`bcrypt`, or the javascripts variant `bryptjs` is a hashing middleware that will allow us to obfuscate our passwords using salts to make them very hard to decode. More on this below
+
+`bcrypt` works by using a password hashing technique.
+
+password hashing is the result of passing a user password through a one-way hash function, mapping the variable sized inputs to a fixed size pseudo-random output, using salts to add additional characters and digits alongside the hash data to make the output hash password unique.
+
+Because of the one-way nature of the generated hashes, decoding a hashed password nearly impossible without knowing the salt.
+
+### Step 9.1 install bcrypt
+
+Just like earlier, install `bcryptjs` using `npm`
+
+```bash
+npm install bcrypt
+```
+
+### Step 9.2 - require bcrypt
+
+in `app.js` require bcrypt at the top of the file.
+
+```javascript
+const bcrypt = require('bcryptjs');
+```
+
+### Step 9.3 - incorporate bcrypt
+
+We are now ready to hash our passwords!
+
+We will refactor our `/sign-up POST` route to incorporate our bcrypt hashing middleware
+
+#### Step 9.3.2 Refactor `/sign-up POST`
+
+```javascript
+app.post('/sign-up', async (req, res, next) => {
+    try {
+        // use bcrypt to hash our provided password.
+        bcrypt.hash(
+            // pass our provided password, and our secret salt.
+            req.body.password,
+            10,
+            async (err, hashedPassword) => {
+                // Handle errors here as needed
+                if (err) {
+                    next(err);
+                }
+                // if no errors occur during hashing, go ahead and submit to the database.
+                await pool.query(
+                    'INSERT INTO users(username, password) VALUES($1, $2)',
+                    // Note we are submitting the hashedPassword to the database!
+                    [req.body.username, hashedPassword]
+                );
+            }
+        );
+        res.redirect('/');
+    } catch (err) {
+        return next(err);
+    }
+});
+```
+
+Salts should normally be stored in the database alongside the hashed password, `bcryptjs` takes care of this for us however, by automatically incorporating the salt within the hash itself.
+
+furthermore, bcrypt is a bit slow, so it is necessary to handle database storage querying inside the callback.
+
+Instead of just passing plain text passwords to our database, we are now hashing the passwords and submitting the hashed passwords to the database instead!
+
+### Step 9.4 - Test sign-up!
+
+Lets try to sign up again, this time passing our password through bcrypt, and see what happens!
+
+If everything has gone correct, you should see a bunch of random letters numbers and symbols instead of the password to typed in!
+
+For comparison, see the first user we tried to make, storing plain text passwords for anyone to steal.
+And the new user, wit ha beautifully hashed password that will be virtually impossible to crack.
+
+![database users example](./public/Screenshot_20240823_153207.png)
+
+Great! We have secure passwords! 
+
+But we have a problem, if you try to sign in to our new user, it will fail, because we are still trying to compare a plain text password with the stored password.
+
+"But how do we get our stored password back from the database so we can compared it" I hear you ask.
+
+The short answer is: **We dont**
+
+The slightly longer answer is that **we should not have to either**. 
+
+A hashed password that is stored can be compared with a similarly hashed password with the same salt to identify if the submitted hash matches the stored hash. 
+
+If they match, it must be the same password, yes?
+
+
+### Step 9.4 - bcrypt.compare
+
+To pull this off, we will utilize `bcrypt.compare()` to validate the password imput.
+
+We will incorporate `bcrypt.compare()` into our `localStrategy`, replacing the `user.password !== password` expression with the `bcrypt.compare()` function.
+

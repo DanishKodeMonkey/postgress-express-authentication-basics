@@ -536,7 +536,11 @@ Now we are ready to leverage the power of passport!
 Thanks to our earlier setup we can now call our passport.authenticate method on post with log-in, and passport will handle the rest! We just have to define where to send the user if it succeeds or fails.
 
     Authenticates requests.
-        Applies the nameed strategy (or strategies) to the incoming request, in order to authenticate the request. If authentication is successful, the user will be logged in and populated at req.user and a session will be established by default. If authentication fails, an unauthorized response will be sent.
+    Applies the named strategy (or strategies) to the incoming request, in order to authenticate
+    the request.
+    If authentication is successful, the user will be logged in
+    and populated at req.user and a session will be established by default.
+    If authentication fails, an unauthorized response will be sent.
 
 in `app.js` add another post route
 

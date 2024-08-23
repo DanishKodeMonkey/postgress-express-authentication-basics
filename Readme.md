@@ -821,3 +821,5 @@ We should now be able to log in user our new user! Unfortunately any users that 
 ## Conclusion
 
 With this we have now established the foundations of a authentication infrastructure!
+
+If interested, the rest of the repo is the project in full, feel free to use it for reference when getting started on a new project.

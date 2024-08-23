@@ -16,6 +16,8 @@ Without further ado, let's get started
 
 To start we will establish a database within psql, the CLI postgreSQL query tool.
 
+### Step 1.1 - New database
+
 So using the terminal, access the tool.
 
 ```bash
@@ -39,6 +41,8 @@ Once found, connect to it.
 ```bash
 \c <database-name-here>
 ```
+
+### Step 1.2 - New table
 
 We are now ready to query our database!
 
@@ -71,6 +75,8 @@ SELECT * FROM users;
 
 And it should return an empty table.
 
+### Step 1.3 - Insert into table
+
 now, we can insert new rows using
 
 ```sql
@@ -90,6 +96,8 @@ This will also simplify insertion operations as postgreSQL will manage unique ID
 
 Initialize our node environment so we can install our packages
 
+### Step 2.1 - Initialize node environment
+
 ```bash
 npm init -y
 ```
@@ -108,6 +116,8 @@ This will allow us to easily wind up our app during development.
 ```
 
 Now that we have a database to interact with, we will need a application.
+
+### Step 2.2 - Install Express and middleware
 
 We will use express, and various useful middleware to establish an application that can
 create, authenticate and manage user data.
@@ -136,6 +146,8 @@ npm install express express-session pg passport passport-local ejs dotenv
 
 We will start by establishing a very basic express application.
 For the moment, we will not yet secure the passwords and just use plain text passwords. **This should never ever be done in a serious production**, and will be fixed later down the line.
+
+### Step 3.1 - app.js
 
 So, let's create `app.js` and get to coding!
 
@@ -204,6 +216,9 @@ app.listen(process.env.PORT, () =>
 ## Step 4 - The views.
 
 During our application setup, we set up a single route rendering a index view.
+
+### Step 4.1 - index.ejs
+
 lets make that now, create a `index.ejs` file.
 
 ```javascript
@@ -227,6 +242,8 @@ This will serve as the page that we will secure and attempt to create access to.
 
 In order for us to authorize access, we will need users to give access to.
 So lets create view, that will allow new users to sign up to our amazing website.
+
+### Step 4.2 - sign-up-form.ejs
 
 Create `sign-up-form.ejs`
 
@@ -268,13 +285,17 @@ Create `sign-up-form.ejs`
 
 With this, we create a simple form that will allow a user to submit a desired username and password.
 
-Remember to establish a route for this view in `app.js`.
+### Step 4.3 - GET Routes for views
+
+Remember to establish a route for the views in `app.js`.
 
 ```javascript
 // Establish second route, rendering the sign-up-form view when requested.
 app.get('/', (req, res) => res.render('index'));
 app.get('/sign-up', (req, res) => res.render('sign-up-form'));
 ```
+
+### Step 4.4 - POST Routes for sign up
 
 Next, create an app.post route that will submit the sign-up form, so we can process the data and send it to our database.
 
@@ -301,6 +322,8 @@ app.post('/sign-up', async (req, res, next) => {
 
 **Again, this is still not a particularly safe way to create users, but we will correct this a bit later, keep at it!**
 
+### Step 4.5 - Testing sign ups
+
 At this point, we are now ready to accept new user sign ups!
 
 Go ahead and boot up our application using `npm run watch` and access `localhost:<your-port>`
@@ -318,4 +341,8 @@ If everything went well, you should be able to query a select from the table and
 SELECT * FROM users;
 ```
 
-Great, one user! And a totally exposed password! Not so great! We will fix that momentarily however.
+Great, one user! And a totally exposed password! Not so great! We will fix that momentarily.
+
+## Step 5 - Authentication
+
+With our basic routing and infrastructure set up, including some routes, we can start to implement some authentication handling, and protect said routes.

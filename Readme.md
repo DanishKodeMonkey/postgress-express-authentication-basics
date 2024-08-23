@@ -346,3 +346,106 @@ Great, one user! And a totally exposed password! Not so great! We will fix that 
 ## Step 5 - Authentication
 
 With our basic routing and infrastructure set up, including some routes, we can start to implement some authentication handling, and protect said routes.
+
+### Step 5.1 - Passport.js
+
+Enter [passport.js](http://www.passportjs.org/), a useful authentication middleware with a whole website filled with various authentication strategies that can be easily applied. The middleware itself is particularly flexible and modular, making configuring to a projects specific needs very easy.
+
+The strategy that is going to be used for this project is a basic, and very common username/password strategy, called the [LocalStrategy](http://www.passportjs.org/concepts/authentication/password/), but could just as well have been various other strategies like 0auth 2fa token authentication and more.
+
+### Step 5.2 - LocalStrategy
+
+Following along the [docs for the strategy](http://www.passportjs.org/concepts/authentication/password/) lets establish our passport middleware in `app.js`
+
+```javascript
+app.use(passport.session());
+
+passport.use(
+    new LocalStrategy(async (username, password, done) => {
+        try {
+            const { rows } = await pool.query(
+                'SELECT * FROM users WHERE username = $1',
+                [username]
+            );
+
+            const user = rows[0];
+
+            if (!user) {
+                return done(null, false, { message: 'Incorrect username' });
+            }
+            if (user.password !== password) {
+                return done(null, false, { message: 'Incorrect password' });
+            }
+            return done(null, user);
+        } catch (err) {
+            return done(err);
+        }
+    })
+);
+```
+
+With this, we can now pass any authentication to our passport localstrategy middleware, and the following will happen.
+
+The function will be called whenever we use `passport.authenticate()` now.
+
+1. We pass a username, password and a done callback middleware function down the chain.
+2. We query our database for any matches to our provided username.
+3. We assign the username to user.
+4. We check if user was returned, if not there was no match and a incorrect username was provided
+5. We match user.password with the passed password, if it does not match, an incorrect password was provided
+6. If both username and password pass, authentication is successful and the process ends.
+
+### Step 5.3 - Sessions and serialization.
+
+In order to ensure that our users are logged in, and allow them to stay logged in for a time as they move around the website, passport will internally call a function from `express-session`.
+
+`express-session` uses some data to create a cookie called `connect.sid` and store it in the user's browser.
+
+We can create two functions that will determine what bit of information is stored and retrieved from these cookies when they are created and decoded. This will allow us to make sure that the information that is decoded and compared actually exists in our database.
+
+#### Step 5.3.1 - serializeUser
+
+`passport.serializeUser` is a passport method that takes a callback containing the information we wish to store in the session data.
+
+For the most basic uses, the functions provided by the [passport docs](http://www.passportjs.org/tutorials/password/session/) will do fine.
+
+lets do it! Under our localStrategy, add:
+
+```javascript
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+```
+
+This will pass our user object, along with the callback function, and inside we pass the user.id to the callback, and finish. This will save the user.id in the session cookie.
+
+#### Step 5.3.2 - deserializeUser
+
+Now, in order to persist a users login, we can deserialize the cookie using `passport.deserializeUser`
+
+so lets add this below the serialization function
+
+```javascript
+passport.deserializeUser(async (id, done) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [
+            id,
+        ]);
+        const user = rows[0];
+
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
+});
+```
+
+With this, whenever a user request is made, we pass the user id from our session and attempt to match it against our database ids.
+
+If the user is found, the session is persisted with the user object. Adding the user object to req.user.
+
+**We do not have to call either of these functions in our code, passport will take care of that for us in the background when needed.**
+
+Congratulations, we have now introduced session persistance too our site!
+
+Next up, we will have to actually be able to log in to our user account and gain a session.

@@ -46,6 +46,51 @@ app.use(
 // Initialize our passport session middleware
 app.use(passport.session());
 
+passport.use(
+    // Pass username, password and middleware callback done.
+    new LocalStrategy(async (username, password, done) => {
+        try {
+            // Query user rows matching the username and their relevant data (password)
+            const { rows } = await pool.query(
+                'SELECT * FROM users WHERE username = $1',
+                [username]
+            );
+            // Assign to user
+            const user = rows[0];
+
+            // If no user is returned, no username matched, call done with relevant message
+            if (!user) {
+                return done(null, false, { message: 'Incorrect username' });
+            }
+            // If user.password does not match passed password, login fails.
+            if (user.password !== password) {
+                return done(null, false, { message: 'Incorrect password' });
+            }
+            // If all of the above passes, finish authentication.
+            return done(null, user);
+        } catch (err) {
+            return done(err);
+        }
+    })
+);
+
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [
+            id,
+        ]);
+        const user = rows[0];
+
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
+});
+
 // Configure express to parse url data to request body.
 app.use(express.urlencoded({ extended: false }));
 

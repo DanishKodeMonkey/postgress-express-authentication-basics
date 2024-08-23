@@ -1,4 +1,5 @@
 /* Import our middleware */
+const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const express = require('express');
 const session = require('express-session');
@@ -91,11 +92,18 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
+// custom middleware that assigns a req.user object to a custom locals.currentUser attribute.
+// we can now call currentUser in any view without having to pass it every time.
+app.use((req, res, next) => {
+    res.locals.currentUser = req.user;
+    next();
+});
+
 // Configure express to parse url data to request body.
 app.use(express.urlencoded({ extended: false }));
 
 // Establish our first route, rendering the index view when requested.
-app.get('/', (req, res) => res.render('index'));
+app.get('/', (req, res) => res.render('index', { user: req.user }));
 // SEcond route to render 'sign-up-form' when requested.
 app.get('/sign-up', (req, res) => res.render('sign-up-form'));
 
@@ -103,11 +111,25 @@ app.get('/sign-up', (req, res) => res.render('sign-up-form'));
 app.post('/sign-up', async (req, res, next) => {
     // When posted, try to
     try {
-        // create a query to send to your database using our pool authentication
-        await pool.query(
-            'INSERT INTO users(username, password) VALUES($1, $2)',
-            // pass our submitted credentials seperately to avoid cross site scripting.
-            [req.body.username, req.body.password]
+        // use bcrypt to hash our provided password.
+        bcrypt.hash(
+            // pass our provided password, and our secret salt.
+            req.body.password,
+            10,
+            async (err, hashedPassword) => {
+                // Handle errors here as needed
+                if (err) {
+                    next(err);
+                }
+                // if no errors occour during hashing, go ahead and submit to the database.
+                // create a query to send to your database using our pool authentication
+                await pool.query(
+                    'INSERT INTO users(username, password) VALUES($1, $2)',
+                    // pass our submitted credentials seperately to avoid cross site scripting.
+                    // Note we are submitting the hashedPassword to the database!
+                    [req.body.username, hashedPassword]
+                );
+            }
         );
         // once done, redirect to index.
         res.redirect('/');
@@ -116,6 +138,24 @@ app.post('/sign-up', async (req, res, next) => {
         // end function, passing the error to next middleware in chain.
         return next(err);
     }
+});
+
+// Post route for log-in
+app.post(
+    '/log-in',
+    passport.authenticate('local', {
+        successRedirect: '/',
+        failureRedirect: '/',
+    })
+);
+
+app.get('/log-out', (req, res, next) => {
+    req.logout((err) => {
+        if (err) {
+            return next(err);
+        }
+        res.redirect('/');
+    });
 });
 
 // Configure app to listen to port, pulled from environment secrets.

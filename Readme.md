@@ -12,6 +12,39 @@ For the purposes of this project, I have a local postgreSQL setup for developmen
 
 Without further ado, let's get started
 
+# Breakdown index
+
+-   [Step 1 - Database Setup](#step-1---database-setup)
+    -   [Step 1.1 - New database](#step-11---new-database)
+    -   [Step 1.2 - New table](#step-12---new-table)
+    -   [Step 1.3 - Insert into table](#step-13---insert-into-table)
+-   [Step 2 - Express setup](#step-2---express-setup)
+    -   [Step 2.1 - Initialize node environment](#step-21---initialize-node-environment)
+    -   [Step 2.2 - Install Express and middleware](#step-22---install-express-and-middleware)
+-   [Step 3 - The express app](#step-3---the-express-app)
+    -   [Step 3.1 - app.js](#step-31---appjs)
+-   [Step 4 - The views](#step-4---the-views)
+    -   [Step 4.1 - index.ejs](#step-41---indexejs)
+    -   [Step 4.2 - sign-up-form.ejs](#step-42---sign-up-formejs)
+    -   [Step 4.3 - GET Routes for views](#step-43---get-routes-for-views)
+    -   [Step 4.4 - POST Routes for sign up](#step-44---post-routes-for-sign-up)
+    -   [Step 4.5 - Testing sign ups](#step-45---testing-sign-ups)
+-   [Step 5 - Authentication](#step-5---authentication)
+    -   [Step 5.1 - Passport.js](#step-51---passportjs)
+    -   [Step 5.2 - LocalStrategy](#step-52---localstrategy)
+    -   [Step 5.3 - Sessions and serialization](#step-53---sessions-and-serialization)
+        -   [Step 5.3.1 - serializeUser](#step-531---serializeuser)
+        -   [Step 5.3.2 - deserializeUser](#step-532---deserializeuser)
+-   [Step 6 - Log-in](#step-6---log-in)
+    -   [Step 6.1 - sign-in-form.ejs](#step-61---sign-in-formejs)
+    -   [Step 6.2 - log-in POST using passport](#step-62---log-in-post-using-passport)
+-   [Step 7 - Using session credentials](#step-7---using-session-credentials)
+    -   [Step 7.1 - index route update](#step-71---index-route-update)
+    -   [Step 7.2 - index view update](#step-72---index-view-update)
+-   [Step 8 - Log out](#step-8---log-out)
+    -   [Step 8.1 - log-out route](#step-81---log-out-route)
+    -   [Step 8.2 - Bonus! the locals object](#step-82---bonus-the-locals-object)
+
 ## Step 1 - Database Setup
 
 To start we will establish a database within psql, the CLI postgreSQL query tool.

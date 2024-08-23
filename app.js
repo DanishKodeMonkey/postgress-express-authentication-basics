@@ -64,7 +64,9 @@ passport.use(
                 return done(null, false, { message: 'Incorrect username' });
             }
             // If user.password does not match passed password, login fails.
-            if (user.password !== password) {
+            const match = await bcrypt.compare(password, user.password);
+            if (!match) {
+                //The passwords do not match!
                 return done(null, false, { message: 'Incorrect password' });
             }
             // If all of the above passes, finish authentication.

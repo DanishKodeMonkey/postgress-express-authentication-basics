@@ -720,7 +720,7 @@ And the new user, wit ha beautifully hashed password that will be virtually impo
 
 ![database users example](./public/Screenshot_20240823_153207.png)
 
-Great! We have secure passwords! 
+Great! We have secure passwords!
 
 But we have a problem, if you try to sign in to our new user, it will fail, because we are still trying to compare a plain text password with the stored password.
 
@@ -728,12 +728,11 @@ But we have a problem, if you try to sign in to our new user, it will fail, beca
 
 The short answer is: **We dont**
 
-The slightly longer answer is that **we should not have to either**. 
+The slightly longer answer is that **we should not have to either**.
 
-A hashed password that is stored can be compared with a similarly hashed password with the same salt to identify if the submitted hash matches the stored hash. 
+A hashed password that is stored can be compared with a similarly hashed password with the same salt to identify if the submitted hash matches the stored hash.
 
 If they match, it must be the same password, yes?
-
 
 ### Step 9.4 - bcrypt.compare
 
@@ -741,3 +740,47 @@ To pull this off, we will utilize `bcrypt.compare()` to validate the password im
 
 We will incorporate `bcrypt.compare()` into our `localStrategy`, replacing the `user.password !== password` expression with the `bcrypt.compare()` function.
 
+bcrypt will then handle all the comparing!
+
+```javascript
+passport.use(
+    new LocalStrategy(async (username, password, done) => {
+        {try {
+            const { rows } = await pool.query(
+                'SELECT * FROM users WHERE username = $1',
+                [username]
+            );
+            // Assign to user
+            const user = rows[0];}
+
+            {...}
+            // Use bcrypt to compare stored user.password hash with passed password.
+            /*
+            bcrypt will use the hash salt stored in the stored password to hash the provided password and compare the two
+            */
+            const match = await bcrypt.compare(password, user.password);
+            // if match returns false...
+            if (!match) {
+                // ... Then the passwords do not match!
+                return done(null, false, { message: 'Incorrect password' });
+            }
+
+            return done(null, user);
+        } catch (err) {
+            return done(err);
+        }
+    })
+);
+```
+
+We did not change much in the process, we still query the username to find the data and check if a user is returned.
+
+However instead of manually just comparing the stored password and our provided one, we instead hand it over to bcrypt to compare using its hash salt from the stored password.
+
+We should now be able to log in user our new user! Unfortunately any users that were created before this change will be unusable now, unless more work is done to manually convert them, but that is a small price to pay for secure password storage.
+
+![after log in](./public/Screenshot_20240823_154806.png)
+
+## Conclusion
+
+With this we have now established the foundations of a authentication infrastructure!
